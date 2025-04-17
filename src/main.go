@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-backend-starter-kit/src/config"
+	"go-backend-starter-template/src/config"
 	"log"
 	"net/http"
 )

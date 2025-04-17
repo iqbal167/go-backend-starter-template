@@ -1,4 +1,4 @@
-module go-backend-starter-kit
+module go-backend-starter-template
 
 go 1.22.5
 
