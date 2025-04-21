@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go-backend-starter-template/src/config"
+	"go-backend-starter-template/src/internal/router"
 	"log"
 	"net/http"
 	"os"
@@ -14,17 +15,13 @@ import (
 
 func main() {
 	cfg := config.Load()
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "app_name=%s version=%s", cfg.App.Name, cfg.App.Version)
-	})
+	router := router.New(cfg)
 
 	addr := fmt.Sprintf("0.0.0.0:%d", 8080)
 
 	server := &http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: router,
 	}
 
 	serverErrors := make(chan error, 1)
