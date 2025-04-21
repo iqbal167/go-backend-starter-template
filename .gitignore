@@ -4,3 +4,4 @@
 .air.toml
 .env
 .DS.Store
+.act.secrets
