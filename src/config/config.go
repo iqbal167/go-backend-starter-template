@@ -9,11 +9,22 @@ import (
 
 type Config struct {
 	App AppConfig `mapstructure:",squash"`
+	DB  DBConfig  `mapstructure:",squash"`
 }
 
 type AppConfig struct {
 	Name    string `mapstructure:"APP_NAME" validate:"required"`
 	Version string `mapstructure:"APP_VERSION" validate:"required"`
+}
+
+type DBConfig struct {
+	Driver   string `mapstructure:"DB_DRIVER" validate:"required"`
+	Host     string `mapstructure:"DB_HOST" validate:"required"`
+	Port     string `mapstructure:"DB_PORT" validate:"required"`
+	User     string `mapstructure:"DB_USER" validate:"required"`
+	Password string `mapstructure:"DB_PASSWORD" validate:"required"`
+	Name     string `mapstructure:"DB_NAME" validate:"required"`
+	SSLMode  string `mapstructure:"DB_SSL_MODE" validate:"required"`
 }
 
 func (c *Config) validate() error {
