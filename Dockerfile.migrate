@@ -1,0 +1,17 @@
+FROM golang:1.22.5-alpine as builder
+
+WORKDIR /builder
+
+COPY . .
+
+ARG DB_DRIVER=postgres
+
+RUN go install -tags "${DB_DRIVER}" github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.0
+
+FROM alpine:3.16.0
+
+RUN apk add --no-cache netcat-openbsd
+
+COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
+
+COPY ./migrations /migrations
