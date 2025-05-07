@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"go-backend-starter-template/src/config"
-	"go-backend-starter-template/src/internal/router"
+	"go-backend-starter-template/internal/config"
+	"go-backend-starter-template/internal/router"
 	"log"
 	"net/http"
 	"os"

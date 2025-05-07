@@ -3,7 +3,7 @@ WORKDIR /builder
 ENV GO111MODULE=on CGO_ENABLED=0
 
 COPY . .
-RUN go build -ldflags "-extldflags '-static' -s -w" -o /builder/main /builder/src/main.go
+RUN go build -ldflags "-extldflags '-static' -s -w" -o /builder/main /builder/cmd/server/main.go
 
 
 FROM alpine:3.16.0

@@ -2,7 +2,7 @@ package router
 
 import (
 	"fmt"
-	"go-backend-starter-template/src/config"
+	"go-backend-starter-template/internal/config"
 	"net/http"
 	"net/http/httptest"
 	"testing"

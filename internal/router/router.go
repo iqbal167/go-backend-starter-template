@@ -1,7 +1,7 @@
 package router
 
 import (
-	"go-backend-starter-template/src/config"
+	"go-backend-starter-template/internal/config"
 	"net/http"
 )
 
