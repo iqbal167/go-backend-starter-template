@@ -65,20 +65,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if [ -f /.dockerenv ]; then
-            # Running in act/docker environment
-            apt-get update
-            apt-get install -y curl
-          else
-            # Running in GitHub Actions
-            sudo apt-get update
-            sudo apt-get install -y curl
-          fi
+          sudo apt-get update
+          sudo apt-get install -y curl
 
       - name: Install golang-migrate
         run: |
           curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
-          mv migrate /usr/local/bin/migrate
+          sudo mv migrate /usr/local/bin/migrate
           which migrate
 
       - name: Run migrations
@@ -116,16 +109,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if [ -f /.dockerenv ]; then
-            # Running in act/docker environment
-            apt-get update
-            apt-get install -y ca-certificates
-          else
-            # Running in GitHub Actions
-            sudo apt-get update
-            sudo apt-get install -y ca-certificates
-          fi
-
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates
 
       - name: Set up Go
         uses: actions/setup-go@v5
