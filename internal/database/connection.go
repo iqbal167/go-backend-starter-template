@@ -16,7 +16,7 @@ type Config struct {
 	ConnMaxLifetime time.Duration
 }
 
-func New(cfg Config) (*sql.DB, error) {
+func New(cfg *Config) (*sql.DB, error) {
 	db, err := sql.Open(cfg.Driver, cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
