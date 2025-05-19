@@ -13,8 +13,8 @@ type PostgresConfig struct {
 	SSLMode  string
 }
 
-func NewPostgresDSN(cfg PostgresConfig) string {
+func NewPostgresDSN(config PostgresConfig) string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name, cfg.SSLMode,
+		config.Host, config.Port, config.User, config.Password, config.Name, config.SSLMode,
 	)
 }

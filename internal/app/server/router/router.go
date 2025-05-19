@@ -5,11 +5,11 @@ import (
 	"net/http"
 )
 
-func New(cfg *config.Config) http.Handler {
+func New(config *config.Config) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("app_name=" + cfg.App.Name + " version=" + cfg.App.Version))
+		w.Write([]byte("app_name=" + config.App.Name + " version=" + config.App.Version))
 	})
 
 	return mux

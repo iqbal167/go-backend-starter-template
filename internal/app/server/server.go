@@ -1,10 +1,10 @@
-package main
+package server
 
 import (
 	"context"
 	"fmt"
+	"go-backend-starter-template/internal/app/server/router"
 	"go-backend-starter-template/internal/config"
-	"go-backend-starter-template/internal/router"
 	"log"
 	"net/http"
 	"os"
@@ -13,15 +13,23 @@ import (
 	"time"
 )
 
-func main() {
-	cfg := config.Load()
-	router := router.New(cfg)
+type Server struct {
+	config *config.Config
+}
+
+func New(config *config.Config) *Server {
+	return &Server{config: config}
+}
+
+func (s *Server) Run() {
+	router := router.New(s.config)
 
 	addr := fmt.Sprintf("0.0.0.0:%d", 8080)
+	handler := s.cors().Handler(router)
 
 	server := &http.Server{
 		Addr:    addr,
-		Handler: router,
+		Handler: handler,
 	}
 
 	serverErrors := make(chan error, 1)

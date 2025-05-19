@@ -2,6 +2,8 @@ module go-backend-starter-template
 
 go 1.22.5
 
+require github.com/rs/cors v1.11.1
+
 require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect

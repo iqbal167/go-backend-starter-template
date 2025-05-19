@@ -18,8 +18,8 @@ func mockConfig() *config.Config {
 }
 
 func TestNewRouter(t *testing.T) {
-	cfg := mockConfig()
-	handler := New(cfg)
+	config := mockConfig()
+	handler := New(config)
 
 	tests := []struct {
 		name           string
@@ -33,7 +33,7 @@ func TestNewRouter(t *testing.T) {
 			path:           "/",
 			method:         http.MethodGet,
 			expectedStatus: http.StatusOK,
-			expectedBody:   fmt.Sprintf("app_name=%s version=%s", cfg.App.Name, cfg.App.Version),
+			expectedBody:   fmt.Sprintf("app_name=%s version=%s", config.App.Name, config.App.Version),
 		},
 	}
 
