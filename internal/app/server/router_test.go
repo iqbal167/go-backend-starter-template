@@ -1,4 +1,4 @@
-package router
+package server
 
 import (
 	"fmt"
@@ -19,7 +19,8 @@ func mockConfig() *config.Config {
 
 func TestNewRouter(t *testing.T) {
 	config := mockConfig()
-	handler := New(config)
+	server := New(config)
+	router := server.routes()
 
 	tests := []struct {
 		name           string
@@ -42,7 +43,7 @@ func TestNewRouter(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
 			w := httptest.NewRecorder()
 
-			handler.ServeHTTP(w, req)
+			router.ServeHTTP(w, req)
 
 			if status := w.Code; status != tt.expectedStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v",

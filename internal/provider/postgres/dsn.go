@@ -1,7 +1,9 @@
-package database
+package postgres
 
 import (
 	"fmt"
+
+	_ "github.com/lib/pq"
 )
 
 type PostgresConfig struct {
@@ -13,7 +15,7 @@ type PostgresConfig struct {
 	SSLMode  string
 }
 
-func NewPostgresDSN(config PostgresConfig) string {
+func NewDSN(config PostgresConfig) string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		config.Host, config.Port, config.User, config.Password, config.Name, config.SSLMode,
 	)
