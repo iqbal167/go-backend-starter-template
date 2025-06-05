@@ -8,10 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type Config struct {
-	DB *gorm.DB
-}
-
 func New(conn *sql.DB) *gorm.DB {
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		Conn: conn,
