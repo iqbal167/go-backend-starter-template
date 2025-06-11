@@ -1,8 +1,10 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
 	"go-backend-starter-template/internal/config"
+	"go-backend-starter-template/internal/pkg/logger"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,9 +19,15 @@ func mockConfig() *config.Config {
 	}
 }
 
+func mockDB() *sql.DB {
+	return nil
+}
+
 func TestNewRouter(t *testing.T) {
+	logger := logger.New()
 	config := mockConfig()
-	server := New(config)
+	db := mockDB()
+	server := New(config, logger, db)
 	router := server.routes()
 
 	tests := []struct {

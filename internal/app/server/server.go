@@ -5,11 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"go-backend-starter-template/internal/config"
-	"go-backend-starter-template/internal/database"
-	"go-backend-starter-template/internal/provider/postgres"
-	"log"
+	"log/slog"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,44 +14,16 @@ import (
 )
 
 type Server struct {
-	config   *config.Config
-	database *sql.DB
+	config *config.Config
+	log    *slog.Logger
+	db     *sql.DB
 }
 
-func (s *Server) ServeHTTP(w *httptest.ResponseRecorder, req *http.Request) {
-	panic("unimplemented")
-}
-
-func New(config *config.Config) *Server {
-	return &Server{config: config}
-}
-
-func (s *Server) db() (*sql.DB, error) {
-	dsn := postgres.NewDSN(postgres.PostgresConfig{
-		Host:     s.config.DB.Host,
-		Port:     s.config.DB.Port,
-		User:     s.config.DB.User,
-		Password: s.config.DB.Password,
-		Name:     s.config.DB.Name,
-		SSLMode:  s.config.DB.SSLMode,
-	})
-
-	db, err := database.New(&database.Config{
-		Driver: s.config.DB.Driver,
-		DSN:    dsn,
-	})
-
-	return db, err
+func New(config *config.Config, logger *slog.Logger, db *sql.DB) *Server {
+	return &Server{config: config, log: logger, db: db}
 }
 
 func (s *Server) Run() {
-	db, err := s.db()
-	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
-	}
-	defer db.Close()
-	s.database = db
-
 	addr := fmt.Sprintf("0.0.0.0:%d", 8080)
 	router := s.routes()
 	handler := s.cors().Handler(router)
@@ -67,7 +36,8 @@ func (s *Server) Run() {
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		log.Printf("Server started at http://%s", addr)
+		s.log.Info("Database connection established")
+		s.log.Info("Server started", slog.String("address", fmt.Sprintf("http://%s", addr)))
 		serverErrors <- server.ListenAndServe()
 	}()
 
@@ -76,19 +46,23 @@ func (s *Server) Run() {
 
 	select {
 	case err := <-serverErrors:
-		log.Fatalf("server error: %v", err)
+		s.log.Error("Server error", slog.String("error", err.Error()))
 
 	case <-shutdown:
-		log.Println("Starting shutdown...")
+		s.log.Info("Starting shutdown...")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
 			server.Close()
-			log.Fatalf("could not stop server gracefully: %v", err)
+			s.log.Error("Could not stop server gracefully", slog.String("error", err.Error()))
 		}
 
-		log.Printf("Server shut down gracefully")
+		if err := s.db.Close(); err != nil {
+			s.log.Error("Could not close database connection", slog.String("error", err.Error()))
+		}
+
+		s.log.Info("Server shut down gracefully")
 	}
 }

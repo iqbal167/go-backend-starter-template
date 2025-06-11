@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/go-playground/validator"
 	"github.com/spf13/viper"
@@ -43,15 +42,15 @@ func newConfig() (*Config, error) {
 	config.configureViper()
 
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("Warning: Error reading config file: %v\n", err)
+		return nil, fmt.Errorf("could not read config file. %w", err)
 	}
 
 	if err := viper.Unmarshal(config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return nil, fmt.Errorf("failed to parse config values. %w", err)
 	}
 
 	if err := config.validate(); err != nil {
-		return nil, fmt.Errorf("invalid configuration: %w", err)
+		return nil, fmt.Errorf("invalid config values. %w", err)
 	}
 
 	return config, nil
@@ -80,10 +79,10 @@ func (c *Config) validate() error {
 	return validator.New().Struct(c)
 }
 
-func Load() *Config {
+func Load() (*Config, error) {
 	config, err := newConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		return nil, err
 	}
-	return config
+	return config, nil
 }

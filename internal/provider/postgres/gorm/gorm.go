@@ -14,7 +14,7 @@ func New(conn *sql.DB) *gorm.DB {
 	}), &gorm.Config{})
 
 	if err != nil {
-		log.Fatalf("failed to open gorm session: %v", err)
+		log.Fatalf("Failed to open gorm session: %v", err)
 	}
 
 	return db
