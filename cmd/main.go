@@ -9,7 +9,6 @@ import (
 	"go-backend-starter-template/internal/database"
 	"go-backend-starter-template/internal/pkg/logger"
 	"go-backend-starter-template/internal/provider/postgres"
-	"log/slog"
 	"os"
 )
 
@@ -37,7 +36,7 @@ func main() {
 	routes := rest.Routes()
 
 	// Create a new server instance and start it.
-	srvOption := serverOption(config, logger)
+	srvOption := serverOption(config)
 	srv := server.New(routes, srvOption)
 
 	if err = srv.Run(); err != nil {
@@ -46,7 +45,7 @@ func main() {
 	}
 }
 
-func serverOption(config *config.Config, logger *slog.Logger) *server.Option {
+func serverOption(config *config.Config) *server.Option {
 	opt := &server.Option{
 		Port: config.App.Port,
 		Cors: &server.Cors{
@@ -56,7 +55,6 @@ func serverOption(config *config.Config, logger *slog.Logger) *server.Option {
 			AllowCredentials: config.CORSConfig.AllowCredentials,
 			MaxAge:           config.CORSConfig.MaxAge,
 		},
-		Logger: logger,
 	}
 
 	return opt

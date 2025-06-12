@@ -11,13 +11,10 @@ import (
 	"time"
 )
 
-type Server struct {
-	*Http
-	*Option
-}
-
 type Http struct {
 	*http.Server
+	*Option
+	*slog.Logger
 }
 
 func (h *Http) Router(routes http.Handler) *Http {
@@ -28,7 +25,6 @@ func (h *Http) Router(routes http.Handler) *Http {
 type Option struct {
 	Port int
 	Cors *Cors
-	*slog.Logger
 }
 
 type Cors struct {
@@ -39,7 +35,7 @@ type Cors struct {
 	MaxAge           int
 }
 
-func New(routes http.Handler, opt *Option) *Server {
+func New(routes http.Handler, opt *Option) *Http {
 	// If no options are provided, create a default configuration.
 	if opt == nil {
 		opt = &Option{
@@ -47,48 +43,36 @@ func New(routes http.Handler, opt *Option) *Server {
 		}
 	}
 
-	// Initialize the logger if not provided.
-	if opt.Logger == nil {
-		opt.Logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	}
+	addr := fmt.Sprintf("0.0.0.0:%d", opt.Port)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	httpServer := newHttpServer(opt.Port)
-
-	srv := &Server{
-		Http:   httpServer,
+	http := &Http{
+		Server: &http.Server{
+			Addr:     addr,
+			ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		},
 		Option: opt,
+		Logger: logger,
 	}
 
 	// Apply CORS middleware if enabled.
 	if opt.Cors != nil {
-		routes = srv.cors().Handler(routes)
-		srv.Info("CORS enabled", slog.Any("cors", opt.Cors))
+		routes = http.cors().Handler(routes)
+		http.Info("CORS enabled", slog.Any("cors", opt.Cors))
 	}
 
 	// Set the final handler on the server.
-	srv.Http.Router(routes)
+	http.Router(routes)
 
-	return srv
+	return http
 }
 
-// newHttpServer creates an Http struct with an initialized server and logger.
-func newHttpServer(port int) *Http {
-	addr := fmt.Sprintf("0.0.0.0:%d", port)
-	return &Http{
-		Server: &http.Server{
-			Addr:         addr,
-			ErrorLog:     slog.NewLogLogger(slog.NewJSONHandler(os.Stdout, nil), slog.LevelError),
-			WriteTimeout: 2 * time.Second,
-		},
-	}
-}
-
-func (srv *Server) Run() error {
+func (http *Http) Run() error {
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		srv.Info("Server started", slog.String("address", fmt.Sprintf("http://%s", srv.Http.Server.Addr)))
-		serverErrors <- srv.Http.ListenAndServe()
+		http.Info("Server started", slog.String("address", fmt.Sprintf("http://%s", http.Server.Addr)))
+		serverErrors <- http.ListenAndServe()
 	}()
 
 	// Wait for an interrupt signal.
@@ -100,17 +84,17 @@ func (srv *Server) Run() error {
 		return fmt.Errorf("server error: %w", err)
 
 	case sig := <-shutdown:
-		srv.Info("Shutdown signal received", slog.String("signal", sig.String()))
+		http.Info("Shutdown signal received", slog.String("signal", sig.String()))
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		// Attempt a graceful shutdown.
-		if err := srv.Http.Server.Shutdown(ctx); err != nil {
-			srv.Http.Server.Close()
+		if err := http.Server.Shutdown(ctx); err != nil {
+			http.Server.Close()
 			return fmt.Errorf("could not stop server gracefully: %w", err)
 		}
 
-		srv.Info("Server stopped gracefully")
+		http.Info("Server stopped gracefully")
 	}
 
 	return nil

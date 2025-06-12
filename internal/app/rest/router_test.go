@@ -48,7 +48,7 @@ func TestNewRouter(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
 			w := httptest.NewRecorder()
 
-			srv.Http.Handler.ServeHTTP(w, req)
+			srv.Server.Handler.ServeHTTP(w, req)
 
 			if status := w.Code; status != tt.expectedStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v",

@@ -4,7 +4,7 @@ import (
 	"github.com/rs/cors"
 )
 
-func (s *Server) cors() *cors.Cors {
+func (s *Http) cors() *cors.Cors {
 	return cors.New(cors.Options{
 		AllowedOrigins:   s.Option.Cors.AllowedOrigins,
 		AllowedMethods:   s.Option.Cors.AllowedMethods,
