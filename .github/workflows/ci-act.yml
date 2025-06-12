@@ -25,10 +25,64 @@ jobs:
       - name: Run golangci-lint
         run: golangci-lint run -v --fast ./...
 
+  migration-check:
+    name: Check Database Migrations
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    services:
+      postgres:
+        image: postgres:13.13-alpine
+        env:
+          POSTGRES_DB: go-backend
+          POSTGRES_USER: go-backend
+          POSTGRES_PASSWORD: go-backend
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check migrations directory
+        continue-on-error: true
+        run: |
+          if [ ! -d "./migrations" ]; then
+            echo "Warning: migrations directory does not exist"
+          fi
+          if [ -z "$(ls -A ./migrations)" ]; then
+            echo "Warning: migrations directory is empty"
+          fi
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y curl
+
+      - name: Install golang-migrate
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
+          mv migrate /usr/local/bin/migrate
+          which migrate
+
+      - name: Run migrations
+        continue-on-error: true
+        run: |
+          if [ -d "./migrations" ] && [ -n "$(ls -A ./migrations)" ]; then
+            migrate -path ./migrations -database "postgres://go-backend:go-backend@localhost:5432/go-backend?sslmode=disable" up
+          else
+            echo "Skipping migrations: migrations directory is missing or empty"
+          fi
+        
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    needs: [lint]
+    needs: [lint, migration-check]
     
     services:
       postgres:
@@ -52,7 +106,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y ca-certificates curl
+          apt-get install -y ca-certificates
 
       - name: Set up Go
         uses: actions/setup-go@v5

@@ -16,6 +16,7 @@ type Config struct {
 type AppConfig struct {
 	Name    string `mapstructure:"APP_NAME"`
 	Version string `mapstructure:"APP_VERSION"`
+	Port    int    `mapstructure:"APP_PORT"`
 }
 
 type CORSConfig struct {
@@ -67,6 +68,7 @@ func (c *Config) configureViper() {
 func (c *Config) setDefaults() {
 	viper.SetDefault("APP_NAME", "server")
 	viper.SetDefault("APP_VERSION", "1.0.0")
+	viper.SetDefault("APP_PORT", 8080)
 	viper.SetDefault("CORS_ALLOWED_ORIGINS", []string{"*"})
 	viper.SetDefault("CORS_ALLOWED_METHODS", []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"})
 	viper.SetDefault("CORS_ALLOWED_HEADERS", []string{"Accept", "Authorization", "Content-Type"})

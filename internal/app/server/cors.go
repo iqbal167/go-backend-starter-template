@@ -6,10 +6,10 @@ import (
 
 func (s *Server) cors() *cors.Cors {
 	return cors.New(cors.Options{
-		AllowedOrigins:   s.config.CORSConfig.AllowedOrigins,
-		AllowedMethods:   s.config.CORSConfig.AllowedMethods,
-		AllowedHeaders:   s.config.CORSConfig.AllowedHeaders,
-		AllowCredentials: s.config.CORSConfig.AllowCredentials,
-		MaxAge:           s.config.CORSConfig.MaxAge,
+		AllowedOrigins:   s.Option.Cors.AllowedOrigins,
+		AllowedMethods:   s.Option.Cors.AllowedMethods,
+		AllowedHeaders:   s.Option.Cors.AllowedHeaders,
+		AllowCredentials: s.Option.Cors.AllowCredentials,
+		MaxAge:           s.Option.Cors.MaxAge,
 	})
 }

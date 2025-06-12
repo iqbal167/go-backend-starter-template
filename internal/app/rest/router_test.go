@@ -1,10 +1,11 @@
-package server
+package rest
 
 import (
-	"database/sql"
 	"fmt"
+
+	"go-backend-starter-template/internal/app/server"
 	"go-backend-starter-template/internal/config"
-	"go-backend-starter-template/internal/pkg/logger"
+
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,16 +20,12 @@ func mockConfig() *config.Config {
 	}
 }
 
-func mockDB() *sql.DB {
-	return nil
-}
-
 func TestNewRouter(t *testing.T) {
-	logger := logger.New()
 	config := mockConfig()
-	db := mockDB()
-	server := New(config, logger, db)
-	router := server.routes()
+	rest := New(config)
+	routes := rest.Routes()
+
+	srv := server.New(routes, &server.Option{})
 
 	tests := []struct {
 		name           string
@@ -51,7 +48,7 @@ func TestNewRouter(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
 			w := httptest.NewRecorder()
 
-			router.ServeHTTP(w, req)
+			srv.Http.Handler.ServeHTTP(w, req)
 
 			if status := w.Code; status != tt.expectedStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v",

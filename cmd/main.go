@@ -1,12 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"go-backend-starter-template/internal/app/rest"
 	"go-backend-starter-template/internal/app/server"
 	"go-backend-starter-template/internal/config"
 	"go-backend-starter-template/internal/database"
 	"go-backend-starter-template/internal/pkg/logger"
 	"go-backend-starter-template/internal/provider/postgres"
+	"log/slog"
 	"os"
 )
 
@@ -19,6 +22,47 @@ func main() {
 		os.Exit(1)
 	}
 
+	logger := logger.New()
+
+	db, err := newDB(config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	logger.Info("Database connection established")
+
+	rest := rest.New(config)
+	routes := rest.Routes()
+
+	// Create a new server instance and start it.
+	srvOption := serverOption(config, logger)
+	srv := server.New(routes, srvOption)
+
+	if err = srv.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to start server: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func serverOption(config *config.Config, logger *slog.Logger) *server.Option {
+	opt := &server.Option{
+		Port: config.App.Port,
+		Cors: &server.Cors{
+			AllowedOrigins:   config.CORSConfig.AllowedOrigins,
+			AllowedMethods:   config.CORSConfig.AllowedMethods,
+			AllowedHeaders:   config.CORSConfig.AllowedHeaders,
+			AllowCredentials: config.CORSConfig.AllowCredentials,
+			MaxAge:           config.CORSConfig.MaxAge,
+		},
+		Logger: logger,
+	}
+
+	return opt
+}
+
+func newDB(config *config.Config) (*sql.DB, error) {
 	dsn := postgres.NewDSN(postgres.PostgresConfig{
 		Host:     config.DB.Host,
 		Port:     config.DB.Port,
@@ -28,19 +72,8 @@ func main() {
 		SSLMode:  config.DB.SSLMode,
 	})
 
-	db, err := database.New(&database.Config{
+	return database.New(&database.Config{
 		Driver: config.DB.Driver,
 		DSN:    dsn,
 	})
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to database: %v\n", err)
-		os.Exit(1)
-	}
-
-	logger := logger.New()
-
-	// Create a new server instance and start it.
-	server := server.New(config, logger, db)
-	server.Run()
 }

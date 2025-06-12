@@ -2,9 +2,7 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"go-backend-starter-template/internal/config"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,55 +12,106 @@ import (
 )
 
 type Server struct {
-	config *config.Config
-	log    *slog.Logger
-	db     *sql.DB
+	*Http
+	*Option
 }
 
-func New(config *config.Config, logger *slog.Logger, db *sql.DB) *Server {
-	return &Server{config: config, log: logger, db: db}
+type Http struct {
+	*http.Server
 }
 
-func (s *Server) Run() {
-	addr := fmt.Sprintf("0.0.0.0:%d", 8080)
-	router := s.routes()
-	handler := s.cors().Handler(router)
+func (h *Http) Router(routes http.Handler) *Http {
+	h.Server.Handler = routes
+	return h
+}
 
-	server := &http.Server{
-		Addr:    addr,
-		Handler: handler,
+type Option struct {
+	Port int
+	Cors *Cors
+	*slog.Logger
+}
+
+type Cors struct {
+	AllowedOrigins   []string
+	AllowedMethods   []string
+	AllowedHeaders   []string
+	AllowCredentials bool
+	MaxAge           int
+}
+
+func New(routes http.Handler, opt *Option) *Server {
+	// If no options are provided, create a default configuration.
+	if opt == nil {
+		opt = &Option{
+			Port: 8080,
+		}
 	}
 
+	// Initialize the logger if not provided.
+	if opt.Logger == nil {
+		opt.Logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	}
+
+	httpServer := newHttpServer(opt.Port)
+
+	srv := &Server{
+		Http:   httpServer,
+		Option: opt,
+	}
+
+	// Apply CORS middleware if enabled.
+	if opt.Cors != nil {
+		routes = srv.cors().Handler(routes)
+		srv.Info("CORS enabled", slog.Any("cors", opt.Cors))
+	}
+
+	// Set the final handler on the server.
+	srv.Http.Router(routes)
+
+	return srv
+}
+
+// newHttpServer creates an Http struct with an initialized server and logger.
+func newHttpServer(port int) *Http {
+	addr := fmt.Sprintf("0.0.0.0:%d", port)
+	return &Http{
+		Server: &http.Server{
+			Addr:         addr,
+			ErrorLog:     slog.NewLogLogger(slog.NewJSONHandler(os.Stdout, nil), slog.LevelError),
+			WriteTimeout: 2 * time.Second,
+		},
+	}
+}
+
+func (srv *Server) Run() error {
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		s.log.Info("Database connection established")
-		s.log.Info("Server started", slog.String("address", fmt.Sprintf("http://%s", addr)))
-		serverErrors <- server.ListenAndServe()
+		srv.Info("Server started", slog.String("address", fmt.Sprintf("http://%s", srv.Http.Server.Addr)))
+		serverErrors <- srv.Http.ListenAndServe()
 	}()
 
+	// Wait for an interrupt signal.
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
 	select {
 	case err := <-serverErrors:
-		s.log.Error("Server error", slog.String("error", err.Error()))
+		return fmt.Errorf("server error: %w", err)
 
-	case <-shutdown:
-		s.log.Info("Starting shutdown...")
-
+	case sig := <-shutdown:
+		srv.Info("Shutdown signal received", slog.String("signal", sig.String()))
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		if err := server.Shutdown(ctx); err != nil {
-			server.Close()
-			s.log.Error("Could not stop server gracefully", slog.String("error", err.Error()))
+		// Attempt a graceful shutdown.
+		if err := srv.Http.Server.Shutdown(ctx); err != nil {
+			srv.Http.Server.Close()
+			return fmt.Errorf("could not stop server gracefully: %w", err)
 		}
 
-		if err := s.db.Close(); err != nil {
-			s.log.Error("Could not close database connection", slog.String("error", err.Error()))
-		}
-
-		s.log.Info("Server shut down gracefully")
+		srv.Info("Server stopped gracefully")
 	}
+
+	return nil
 }
