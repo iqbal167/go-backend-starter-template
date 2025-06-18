@@ -4,29 +4,35 @@ import (
 	"database/sql"
 	"fmt"
 	"go-backend-starter-template/internal/app/rest"
-	"go-backend-starter-template/internal/app/server"
 	"go-backend-starter-template/internal/config"
 	"go-backend-starter-template/internal/database"
 	"go-backend-starter-template/internal/pkg/logger"
+	"go-backend-starter-template/internal/pkg/server"
 	"go-backend-starter-template/internal/provider/postgres"
 	"os"
 )
 
 // main is the entry point of the application.
 func main() {
+	if err := runApp(); err != nil {
+		// Print the error message and Exit the program with a non-zero status code to indicate failure.
+		fmt.Fprintf(os.Stderr, "Could not start application: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runApp() error {
 	config, err := config.Load()
 	if err != nil {
-		// Print the error message and Exit the program with a non-zero status code to indicate failure.
-		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
-		os.Exit(1)
+
+		return fmt.Errorf("Failed to load config: %v\n", err)
 	}
 
 	logger := logger.New()
 
 	db, err := newDB(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to database: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed to connect to database: %v\n", err)
 	}
 	defer db.Close()
 
@@ -38,11 +44,11 @@ func main() {
 	// Create a new server instance and start it.
 	srvOption := serverOption(config)
 	srv := server.New(routes, srvOption)
-
 	if err = srv.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to start server: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed to start server: %v\n", err)
 	}
+
+	return nil
 }
 
 func serverOption(config *config.Config) *server.Option {

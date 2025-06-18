@@ -15,6 +15,7 @@ type Http struct {
 	*http.Server
 	*Option
 	*slog.Logger
+	shutdown chan struct{}
 }
 
 func (h *Http) Router(routes http.Handler) *Http {
@@ -51,8 +52,9 @@ func New(routes http.Handler, opt *Option) *Http {
 			Addr:     addr,
 			ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
 		},
-		Option: opt,
-		Logger: logger,
+		Option:   opt,
+		Logger:   logger,
+		shutdown: make(chan struct{}),
 	}
 
 	// Apply CORS middleware if enabled.
@@ -75,27 +77,38 @@ func (http *Http) Run() error {
 		serverErrors <- http.ListenAndServe()
 	}()
 
-	// Wait for an interrupt signal.
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+	// Wait for an interrupt signal OR a programmatic shutdown signal.
+	osSignals := make(chan os.Signal, 1)
+	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
 
 	select {
 	case err := <-serverErrors:
 		return fmt.Errorf("server error: %w", err)
 
-	case sig := <-shutdown:
-		http.Info("Shutdown signal received", slog.String("signal", sig.String()))
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
+	case sig := <-osSignals:
+		http.Info("Shutdown signal received", slog.String("source", "OS Signal"), slog.String("signal", sig.String()))
+		return http.gracefulShutdown()
 
-		// Attempt a graceful shutdown.
-		if err := http.Server.Shutdown(ctx); err != nil {
-			http.Server.Close()
-			return fmt.Errorf("could not stop server gracefully: %w", err)
-		}
+	case <-http.shutdown:
+		http.Info("Shutdown signal received", slog.String("source", "Programmatic"))
+		return http.gracefulShutdown()
+	}
+}
 
-		http.Info("Server stopped gracefully")
+func (http *Http) gracefulShutdown() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := http.Server.Shutdown(ctx); err != nil {
+		http.Server.Close()
+		return fmt.Errorf("could not stop server gracefully: %w", err)
 	}
 
+	http.Info("Server stopped gracefully")
 	return nil
+}
+
+// Shutdown initiates a programmatic shutdown of the server.
+func (http *Http) Shutdown() {
+	close(http.shutdown)
 }

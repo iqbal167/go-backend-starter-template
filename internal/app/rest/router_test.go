@@ -3,8 +3,8 @@ package rest
 import (
 	"fmt"
 
-	"go-backend-starter-template/internal/app/server"
 	"go-backend-starter-template/internal/config"
+	"go-backend-starter-template/internal/pkg/server"
 
 	"net/http"
 	"net/http/httptest"
