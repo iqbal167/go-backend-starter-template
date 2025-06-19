@@ -9,7 +9,11 @@ import (
 	"go-backend-starter-template/internal/pkg/logger"
 	"go-backend-starter-template/internal/pkg/server"
 	"go-backend-starter-template/internal/provider/postgres"
+	"log/slog"
 	"os"
+	"time"
+
+	"github.com/rs/cors"
 )
 
 // main is the entry point of the application.
@@ -24,7 +28,6 @@ func main() {
 func runApp() error {
 	config, err := config.Load()
 	if err != nil {
-
 		return fmt.Errorf("Failed to load config: %v\n", err)
 	}
 
@@ -41,29 +44,31 @@ func runApp() error {
 	rest := rest.New(config)
 	routes := rest.Routes()
 
-	// Create a new server instance and start it.
-	srvOption := serverOption(config)
-	srv := server.New(routes, srvOption)
-	if err = srv.Run(); err != nil {
-		return fmt.Errorf("Failed to start server: %v\n", err)
-	}
-
-	return nil
-}
-
-func serverOption(config *config.Config) *server.Option {
-	opt := &server.Option{
-		Port: config.App.Port,
-		Cors: &server.Cors{
+	// Create a new server instance
+	srv, err := server.NewServerBuilder().
+		WithPort(config.App.Port).
+		WithReadTimeout(5 * time.Second).
+		WithWriteTimeout(10 * time.Second).
+		WithLogLevel(slog.LevelInfo).
+		WithCORS(cors.Options{
 			AllowedOrigins:   config.CORSConfig.AllowedOrigins,
 			AllowedMethods:   config.CORSConfig.AllowedMethods,
 			AllowedHeaders:   config.CORSConfig.AllowedHeaders,
 			AllowCredentials: config.CORSConfig.AllowCredentials,
 			MaxAge:           config.CORSConfig.MaxAge,
-		},
+		}).
+		WithHandler(routes).
+		Build()
+
+	if err != nil {
+		return fmt.Errorf("failed to build server: %v\n", err)
 	}
 
-	return opt
+	if err = srv.Run(); err != nil {
+		return fmt.Errorf("failed to run server: %v\n", err)
+	}
+
+	return nil
 }
 
 func newDB(config *config.Config) (*sql.DB, error) {

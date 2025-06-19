@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"go-backend-starter-template/internal/config"
-	"go-backend-starter-template/internal/pkg/server"
 
 	"net/http"
 	"net/http/httptest"
@@ -25,8 +24,6 @@ func TestNewRouter(t *testing.T) {
 	rest := New(config)
 	routes := rest.Routes()
 
-	srv := server.New(routes, &server.Option{})
-
 	tests := []struct {
 		name           string
 		path           string
@@ -46,17 +43,17 @@ func TestNewRouter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
-			w := httptest.NewRecorder()
+			rec := httptest.NewRecorder()
 
-			srv.Server.Handler.ServeHTTP(w, req)
+			routes.ServeHTTP(rec, req)
 
-			if status := w.Code; status != tt.expectedStatus {
+			if status := rec.Code; status != tt.expectedStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v",
 					status, tt.expectedStatus)
 			}
 
 			if tt.expectedBody != "" {
-				if body := w.Body.String(); body != tt.expectedBody {
+				if body := rec.Body.String(); body != tt.expectedBody {
 					t.Errorf("handler returned wrong body: got %v want %v",
 						body, tt.expectedBody)
 				}
